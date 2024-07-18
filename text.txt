@@ -1,0 +1,22 @@
+from telethon import TelegramClient, events
+
+# Replace 'YOUR_API_ID', 'YOUR_API_HASH', and 'YOUR_BOT_TOKEN' with your actual values
+api_id = 'YOUR_API_ID'
+api_hash = 'YOUR_API_HASH'
+bot_token = 'YOUR_BOT_TOKEN'
+
+client = TelegramClient('bot_session', api_id, api_hash).start(bot_token=bot_token)
+
+# Replace 'https://t.me/joinchat/...' with the chat invite link
+chat_invite_link = 'https://t.me/joinchat/...'
+
+# Join the chat using the invite link
+chat_entity = client.get_entity(chat_invite_link)
+chat_id = chat_entity.id
+
+# Get the participants of the chat
+participants = client.get_participants(chat_id)
+
+# Print the list of participants
+for participant in participants:
+    print(participant.username, participant.first_name, participant.last_name)
