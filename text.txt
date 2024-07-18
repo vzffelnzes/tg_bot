@@ -20,3 +20,26 @@ participants = client.get_participants(chat_id)
 # Print the list of participants
 for participant in participants:
     print(participant.username, participant.first_name, participant.last_name)
+
+
+
+
+
+from telethon import TelegramClient, events
+
+# Replace 'your_api_id' and 'your_api_hash' with your actual API ID and hash
+api_id = 'your_api_id'
+api_hash = 'your_api_hash'
+
+# Replace 'your_phone_number' with your actual phone number
+phone_number = 'your_phone_number'
+
+# Create a user session
+client = TelegramClient(phone_number, api_id, api_hash)
+
+# Start the client
+client.start()
+
+# Now you can use the CheckChatInviteRequest method
+result = client(CheckChatInviteRequest(hash='your_invite_link'))
+print(result)
