@@ -17,7 +17,9 @@ async def get_user_list(event):
         participants = []
         async for user in client.iter_participants(chat):
             participants.append(user)
-        user_list = '\n'.join([f'{user.id}: {user.first_name} {user.last_name}' for user in participants])
+        user_list = '\n'.join([
+            f'[{user.first_name} {user.last_name}](tg://user?id={user.id})' if user.username is None else f'[@{user.username}](tg://user?id={user.id})'
+            for user in participants])
         if not user_list:
             user_list = 'В этом чате нет участников.'
         await event.reply(user_list)
