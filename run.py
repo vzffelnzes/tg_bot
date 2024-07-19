@@ -1,19 +1,40 @@
+import os
+
 from config import TOKEN, API_ID, API_HASH
 import asyncio
 import logging
 from telethon import TelegramClient, events
 from telethon.tl.types import ChannelParticipantsAdmins, ChannelParticipantsBots
 from telethon.errors import UserIsBlockedError, PeerIdInvalidError, UserPrivacyRestrictedError
+from db.user import User
+from db.db_session import *
+from session import res
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger('telegram')
+logger.setLevel(logging.INFO)
+handler = logging.StreamHandler()
+handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
+logger.addHandler(handler)
+
+global_init("db/base.db")
+
+links = []
+res = []
 
 client = TelegramClient("bot", API_ID, API_HASH).start(bot_token=TOKEN)
 
-
 @client.on(events.NewMessage(pattern='/get_user_list (.*)'))
 async def get_user_list(event):
-    chat_links = event.pattern_match.group(1).split()
-    result = {}
+    global links
+    chat_links = event.pattern_match.group(1).split()[:-1]
+    category = event.pattern_match.group(1).split()[-1]
+    links = chat_links
+    os.system("session.py")
+    #result = {}
+    result = res
 
-    for chat_link in chat_links:
+    """for chat_link in chat_links:
         try:
             chat = await client.get_entity(chat_link)
 
@@ -29,13 +50,24 @@ async def get_user_list(event):
             async for user in client.iter_participants(chat):
                 if user.id in admin_ids or user.id in bot_ids or user.is_self:
                     continue
+
                 username = user.username if user.username else f'{user.first_name} {user.last_name}'.strip()
                 participants.append(username)
+
+                member = User()
+                member.user_id = str(user.id)
+                member.nickname = str(user.username)
+                member.category = str(category)
+                member.first_name = str(user.first_name)
+                member.last_name = str(user.last_name)
+                db_sess = create_session()
+                db_sess.add(member)
+                db_sess.commit()
 
             result[chat_link] = participants
 
         except Exception as e:
-            result[chat_link] = f'Произошла ошибка: {e}'
+            result[chat_link] = f'Произошла ошибка: {e}'"""
 
     await event.reply(str(result))
 
@@ -43,33 +75,25 @@ async def get_user_list(event):
 @client.on(events.NewMessage(pattern='/send_message_to_users (.*)'))
 async def send_message_to_users(event):
     args = event.pattern_match.group(1).split(maxsplit=1)
-    if len(args) < 2:
-        await event.reply('Использование: /send_message_to_users <chat_link> <message>')
+    if len(args) != 2:
+        await event.reply('Использование: /send_message_to_users <category> <message>')
         return
 
-    chat_link, message = args
+    db_session = create_session()
+
+    category, message = args
+    users = list(db_session.query(User).filter(User.category == category))
+    print(users)
     sent_to = []
     not_sent_to = []
 
     try:
-        chat = await client.get_entity(chat_link)
-
-        admin_ids = set()
-        async for admin in client.iter_participants(chat, filter=ChannelParticipantsAdmins):
-            admin_ids.add(admin.id)
-
-        bot_ids = set()
-        async for bot in client.iter_participants(chat, filter=ChannelParticipantsBots):
-            bot_ids.add(bot.id)
-
-        async for user in client.iter_participants(chat):
-            if user.id in admin_ids or user.id in bot_ids or user.is_self:
-                continue
+        for user in users:
             try:
-                await client.send_message(user.id, message)
-                sent_to.append(user.username if user.username else f'{user.first_name} {user.last_name}'.strip())
+                await client.send_message(user.user_id, message)
+                sent_to.append(user.nickname if user.nickname else f'{user.first_name} {user.last_name}'.strip())
             except (UserIsBlockedError, PeerIdInvalidError):
-                not_sent_to.append(user.username if user.username else f'{user.first_name} {user.last_name}'.strip())
+                not_sent_to.append(user.nickname if user.nickname else f'{user.first_name} {user.last_name}'.strip())
 
     except Exception as e:
         await event.reply(f'Произошла ошибка: {e}')
@@ -125,5 +149,4 @@ def main():
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
     main()
