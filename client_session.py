@@ -4,7 +4,7 @@ import logging
 from telethon import TelegramClient, events
 from telethon.tl.types import ChannelParticipantsAdmins, ChannelParticipantsBots
 from telethon.errors import UserIsBlockedError, PeerIdInvalidError, UserPrivacyRestrictedError
-from run import links
+
 
 num_client = TelegramClient("tg", API_ID, API_HASH).start()
 
@@ -28,4 +28,5 @@ async def get_members(links):
 
     return res
 
-res = get_members(links)
+res = get_members("https://t.me/sgnivshiygnome")
+print(res)

@@ -1,5 +1,3 @@
-import os
-
 from config import TOKEN, API_ID, API_HASH
 import asyncio
 import logging
@@ -8,7 +6,6 @@ from telethon.tl.types import ChannelParticipantsAdmins, ChannelParticipantsBots
 from telethon.errors import UserIsBlockedError, PeerIdInvalidError, UserPrivacyRestrictedError
 from db.user import User
 from db.db_session import *
-from session import res
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger('telegram')
@@ -19,22 +16,17 @@ logger.addHandler(handler)
 
 global_init("db/base.db")
 
-links = []
-res = []
-
+#num_client = TelegramClient("tg", API_ID, API_HASH).start()
 client = TelegramClient("bot", API_ID, API_HASH).start(bot_token=TOKEN)
 
 @client.on(events.NewMessage(pattern='/get_user_list (.*)'))
 async def get_user_list(event):
-    global links
     chat_links = event.pattern_match.group(1).split()[:-1]
     category = event.pattern_match.group(1).split()[-1]
-    links = chat_links
-    os.system("session.py")
-    #result = {}
-    result = res
+    result = {}
+    #result = await get_members(chat_links, num_client)
 
-    """for chat_link in chat_links:
+    for chat_link in chat_links:
         try:
             chat = await client.get_entity(chat_link)
 
@@ -67,7 +59,7 @@ async def get_user_list(event):
             result[chat_link] = participants
 
         except Exception as e:
-            result[chat_link] = f'Произошла ошибка: {e}'"""
+            result[chat_link] = f'Произошла ошибка: {e}'
 
     await event.reply(str(result))
 
