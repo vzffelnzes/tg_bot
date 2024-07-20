@@ -1,8 +1,9 @@
 from config import TOKEN, API_ID, API_HASH
 import asyncio
 import logging
-from telethon import TelegramClient, events
-from telethon.tl.types import ChannelParticipantsAdmins, ChannelParticipantsBots
+from telethon import TelegramClient, events, Button
+from telethon.tl.types import ChannelParticipantsAdmins, ChannelParticipantsBots, ReplyInlineMarkup, \
+    ReplyKeyboardMarkup, PeerUser, KeyboardButtonRow, KeyboardButton
 from telethon.errors import UserIsBlockedError, PeerIdInvalidError, UserPrivacyRestrictedError
 from db.user import User
 from db.db_session import *
@@ -16,15 +17,29 @@ logger.addHandler(handler)
 
 global_init("db/base.db")
 
-#num_client = TelegramClient("tg", API_ID, API_HASH).start()
+# num_client = TelegramClient("tg", API_ID, API_HASH).start()
 client = TelegramClient("bot", API_ID, API_HASH).start(bot_token=TOKEN)
+
+
+@client.on(events.NewMessage(pattern='/start'))
+async def start(event):
+    keyboard_buttons = [
+        [Button.text("Меню")]
+    ]
+
+    await client.send_message(
+        event.chat_id,
+        "Привет! Это бот для парсинга аудитории в телеграмме, чтобы начать взаимодействовать зайдите в меню",
+        buttons=keyboard_buttons
+    )
+
 
 @client.on(events.NewMessage(pattern='/get_user_list (.*)'))
 async def get_user_list(event):
     chat_links = event.pattern_match.group(1).split()[:-1]
     category = event.pattern_match.group(1).split()[-1]
     result = {}
-    #result = await get_members(chat_links, num_client)
+    # result = await get_members(chat_links, num_client)
 
     for chat_link in chat_links:
         try:
@@ -92,47 +107,6 @@ async def send_message_to_users(event):
         return
 
     response = f'Сообщение было отправлено:\n{sent_to}\n\nНе удалось отправить сообщение:\n{not_sent_to}'
-    await event.reply(response)
-
-
-@client.on(events.NewMessage(pattern='/send_invite_to_users (.*)'))
-async def send_invite_to_users(event):
-    args = event.pattern_match.group(1).split(maxsplit=1)
-    if len(args) < 2:
-        await event.reply('Использование: /send_invite_to_users <source_chat_link> <destination_channel_link>')
-        return
-
-    source_chat_link, destination_channel_link = args
-    invite_link = destination_channel_link  # Предполагается, что это полная ссылка-приглашение
-    sent_to = []
-    not_sent_to = []
-
-    try:
-        source_chat = await client.get_entity(source_chat_link)
-
-        admin_ids = set()
-        async for admin in client.iter_participants(source_chat, filter=ChannelParticipantsAdmins):
-            admin_ids.add(admin.id)
-
-        bot_ids = set()
-        async for bot in client.iter_participants(source_chat, filter=ChannelParticipantsBots):
-            bot_ids.add(bot.id)
-
-        async for user in client.iter_participants(source_chat):
-            if user.id in admin_ids or user.id in bot_ids or user.is_self:
-                continue
-            try:
-                await client.send_message(user.id, f'Привет! Присоединяйтесь к нашему каналу: {invite_link}')
-                sent_to.append(user.username if user.username else f'{user.first_name} {user.last_name}'.strip())
-            except (UserIsBlockedError, PeerIdInvalidError, UserPrivacyRestrictedError) as e:
-                not_sent_to.append(
-                    (user.username if user.username else f'{user.first_name} {user.last_name}'.strip(), str(e)))
-
-    except Exception as e:
-        await event.reply(f'Произошла ошибка: {e}')
-        return
-
-    response = f'Приглашение отправлено:\n{sent_to}\n\nНе удалось отправить приглашение:\n{not_sent_to}'
     await event.reply(response)
 
 
