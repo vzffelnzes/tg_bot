@@ -8,9 +8,9 @@ from telethon.errors import UserIsBlockedError, PeerIdInvalidError, UserPrivacyR
 from db.user import User
 from db.db_session import *
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger('telegram')
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.DEBUG)
 handler = logging.StreamHandler()
 handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
 logger.addHandler(handler)
@@ -18,19 +18,16 @@ logger.addHandler(handler)
 global_init("db/base.db")
 
 # num_client = TelegramClient("tg", API_ID, API_HASH).start()
-client = TelegramClient("bot", API_ID, API_HASH).start(bot_token=TOKEN)
+client = TelegramClient("client1", API_ID, API_HASH).start()
 
 
 @client.on(events.NewMessage(pattern='/start'))
 async def start(event):
-    keyboard_buttons = [
-        [Button.text("Меню")]
-    ]
 
     await client.send_message(
-        event.chat_id,
-        "Привет! Это бот для парсинга аудитории в телеграмме, чтобы начать взаимодействовать зайдите в меню",
-        buttons=keyboard_buttons
+        await event.get_chat(),
+        "Привет! Это бот для парсинга аудитории в телеграмме, что бы ",
+
     )
 
 
@@ -79,11 +76,11 @@ async def get_user_list(event):
     await event.reply(str(result))
 
 
-@client.on(events.NewMessage(pattern='/send_message_to_users (.*)'))
+@client.on(events.NewMessage(pattern='/send_message (.*)'))
 async def send_message_to_users(event):
     args = event.pattern_match.group(1).split(maxsplit=1)
     if len(args) != 2:
-        await event.reply('Использование: /send_message_to_users <category> <message>')
+        await event.reply('Использование: /send_message <category> <message>')
         return
 
     db_session = create_session()
