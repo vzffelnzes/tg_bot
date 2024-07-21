@@ -31,6 +31,28 @@ async def start(event):
     )
 
 
+@client.on(events.NewMessage(pattern='Меню'))
+async def menu(event):
+    keyboard_buttons = [
+        [Button.inline("get_user_list", b"get_user_list"),
+         Button.inline("send_message_to_users", b"send_message_to_users")]
+    ]
+
+    await client.send_message(
+        event.chat_id,
+        "Выберите команду:",
+        buttons=keyboard_buttons
+    )
+
+
+@client.on(events.CallbackQuery)
+async def callback(event):
+    if event.data == b'get_user_list':
+        await event.respond("Напишите /get_user_list <ссылки> <категория>")
+    elif event.data == b'send_message_to_users':
+        await event.respond("Напишите /send_message_to_users <категория> <сообщения>")
+
+
 @client.on(events.NewMessage(pattern='/get_user_list (.*)'))
 async def get_user_list(event):
     chat_links = event.pattern_match.group(1).split()[:-1]
