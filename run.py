@@ -30,5 +30,4 @@ async def send_message_to_users(client, message):
     await message.reply(send_message_to_users(message))
 
 
-
 app.run()
