@@ -13,35 +13,33 @@ handler = logging.StreamHandler()
 handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
 logger.addHandler(handler)
 
-global_init("db/base.db")
+global_init("db/base.sqlite3")
 
 app = Client("mybot", api_id=API_ID, api_hash=API_HASH)
 
 
-async def get_user_list(message):
+@app.on_message(filters.command("start"))
+async def start(client, message):
+    await message.reply("Привет! Это бот для парсинга аудитории в телеграмме, что бы добавить пользователей в базу данных напиши /get_user_list <ссылки на чаты> <тематика>. Чтобы разослать сообщене напиши /send_message <тематика> <сообщение>")
+
+
+@app.on_message(filters.command("get_user_list") & filters.regex(r"(.*)"))
+async def get_user_list(client, message):
     chat_links = message.matches[0].group(1).split()[1:-1]
     category = message.matches[0].group(1).split()[-1]
     result = {}
 
-    print(1)
-    a = 0
     for chat_link in chat_links:
         aaa = chat_link.split("/")[-1]
-        print(1)
-        res = None
         try:
             chat = await app.get_chat(aaa)
             admin_ids = set()
             async for admin in chat.get_members(filter=enums.ChatMembersFilter.ADMINISTRATORS):
                 admin_ids.add(admin.user.id)
 
-            print(1)
-
             bot_ids = set()
             async for bot in chat.get_members(filter=enums.ChatMembersFilter.BOTS):
                 bot_ids.add(bot.user.id)
-
-            print(1)
 
             participants = []
             async for user in chat.get_members():
@@ -61,26 +59,24 @@ async def get_user_list(message):
                 db_sess.add(member)
                 db_sess.commit()
 
-            result[chat_link] = participants
-            print(1)
+            result = "Успешно выполнено."
+
         except Exception as e:
-            a = 1
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
             print(e)
-            res = e
+            result[chat_link] = f"Произошла ошибка: {e}"
 
-    if a == 0:
-        return "Успешно выполнено."
-    elif a == 1:
-        return f'Произошла ошибка: {res}'
+    await message.reply(str(result))
 
 
-async def send_message_to_users(message):
+@app.on_message(filters.command("send_message") & filters.regex(r"(.*)"))
+async def send_message_to_users(client, message):
     args = message.matches[0].group(1).split()
     if len(args) != 3:
-        return "Использование: /send_message <category> <message>"
+        await message.reply("Использование: /send_message <category> <message>")
+        return
 
     db_session = create_session()
     category, message_text = args[1], args[2]
@@ -97,9 +93,11 @@ async def send_message_to_users(message):
                 not_sent_to += 1 if user.nickname else f"{user.first_name} {user.last_name}".strip()
 
     except Exception as e:
-        return (f"Произошла ошибка: {e}")
+        await message.reply(f"Произошла ошибка: {e}")
+        return
 
-    return f"Сообщение было отправлено:\n{sent_to}\n\nНе удалось отправить сообщение:\n{not_sent_to}"
+    response = f"Сообщение было отправлено:\n{sent_to}\n\nНе удалось отправить сообщение:\n{not_sent_to}"
+    await message.reply(response)
 
 
 app.run()
